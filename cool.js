@@ -1,85 +1,45 @@
-javascript:(function() {
-    // Check if already running
-    if(window.geofsPlayerTrackerUI){
-        alert("GeoFS Player Tracker already running!");
-        return;
+if(window.passengerUi) return;
+window.passengerUi=true;
+let container=document.createElement("div");
+container.style.position="fixed";
+container.style.top="100px";
+container.style.right="30px";
+container.style.background="rgba(35,40,51,0.9)";
+container.style.color="#fff";
+container.style.padding="10px 15px";
+container.style.borderRadius="8px";
+container.style.zIndex=99999;
+container.style.fontFamily="Arial,sans-serif";
+container.innerHTML='<button id="startPassenger">Start Passenger Cam</button><button id="stopPassenger" style="margin-left:10px">Stop Passenger Cam</button><div style="margin-top:8px;color:#aaa;font-size:12px;">Test passenger camera mode</div>';
+document.body.appendChild(container);
+let camId=null;
+function camLoop(){
+    if(geofs && geofs.api && geofs.api.viewer && geofs.aircraft && geofs.aircraft.instance && geofs.aircraft.instance.position){
+        let pos=geofs.aircraft.instance.position;
+        let hdg=geofs.aircraft.instance.heading||0;
+        let x=-15*Math.cos((hdg-90)*Math.PI/180);
+        let y=-15*Math.sin((hdg-90)*Math.PI/180);
+        let z=3;
+        let lon=pos.longitude+(x/(111320*Math.cos(pos.latitude*Math.PI/180)));
+        let lat=pos.latitude+(y/110540);
+        let alt=pos.altitude+z;
+        geofs.api.viewer.camera.setView({
+            destination:Cesium.Cartesian3.fromDegrees(lon,lat,alt),
+            orientation:{
+                heading:Cesium.Math.toRadians(hdg-90),
+                pitch:Cesium.Math.toRadians(-5),
+                roll:0
+            }
+        });
     }
-    window.geofsPlayerTrackerUI = true;
-
-    // Create UI container
-    let container = document.createElement("div");
-    container.style.position = "fixed";
-    container.style.top = "80px";
-    container.style.right = "20px";
-    container.style.background = "rgba(30,30,40,0.9)";
-    container.style.color = "#fff";
-    container.style.zIndex = 99999;
-    container.style.padding = "10px";
-    container.style.borderRadius = "8px";
-    container.style.fontFamily = "Arial,sans-serif";
-    container.innerHTML = "<b>GeoFS Multiplayer Tracker</b><br /><select id='playerSelect'><option>None</option></select> <button id='snapCam'>Snap & Track</button> <button id='untrackCam'>Untrack</button> <br /><small style='color:gray'>Select a player to track camera.<br>Addon by AI</small>";
-    document.body.appendChild(container);
-
-    // Update player list
-    function updatePlayerList(){
-        let select = document.getElementById('playerSelect');
-        if(!select) return;
-        select.innerHTML = "<option>None</option>";
-        if(geofs && geofs.multiplayer && geofs.multiplayer.visibleUsers){
-            Object.values(geofs.multiplayer.visibleUsers).forEach(function(user){
-                let opt = document.createElement('option');
-                opt.value = user.id;
-                opt.textContent = user.callsign + " [" + user.id + "]";
-                select.appendChild(opt);
-            });
-        }
-    }
-    updatePlayerList();
-    setInterval(updatePlayerList, 3000);
-
-    // Camera tracker loop
-    let trackerId = null;
-    function trackPlayerLoop(){
-        if(!window.geofsPlayerTrackerUIPlayerId) return;
-        let user = geofs.multiplayer.visibleUsers[window.geofsPlayerTrackerUIPlayerId];
-        if(user && user.aircraft && user.aircraft.position){
-            let pos = user.aircraft.position;
-            let cam = geofs.api.viewer.camera;
-            cam.setView({
-                destination: Cesium.Cartesian3.fromDegrees(pos.longitude, pos.latitude, pos.altitude + 30),
-                orientation: {
-                    heading: Cesium.Math.toRadians(user.aircraft.heading-90), // Look behind; tweak if needed
-                    pitch: Cesium.Math.toRadians(-15),
-                    roll: 0
-                }
-            });
-        }
-        trackerId = requestAnimationFrame(trackPlayerLoop);
-    }
-
-    // Attach to buttons
-    document.getElementById('snapCam').onclick = function(){
-        let select = document.getElementById('playerSelect');
-        let val = select.value;
-        window.geofsPlayerTrackerUIPlayerId = val !== "None" ? val : null;
-        if(trackerId) cancelAnimationFrame(trackerId);
-        if(window.geofsPlayerTrackerUIPlayerId){
-            trackPlayerLoop();
-        }
-    };
-    document.getElementById('untrackCam').onclick = function(){
-        window.geofsPlayerTrackerUIPlayerId = null;
-        if(trackerId) cancelAnimationFrame(trackerId);
-    };
-
-    // Remove UI on Esc
-    document.addEventListener('keydown',function(e){
-        if(e.key === "Escape" && window.geofsPlayerTrackerUI){
-            container.remove(); 
-            window.geofsPlayerTrackerUI = false;
-            window.geofsPlayerTrackerUIPlayerId = null;
-            if(trackerId) cancelAnimationFrame(trackerId);
-        }
-    });
-})();
-                                                           
+    camId=requestAnimationFrame(camLoop);
+}
+document.getElementById("startPassenger").onclick=function(){
+    if(camId) cancelAnimationFrame(camId);
+    camLoop();
+};
+document.getElementById("stopPassenger").onclick=function(){
+    if(camId) cancelAnimationFrame(camId);
+    camId=null;
+};
+                                   
