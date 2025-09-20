@@ -1,3 +1,4 @@
+javascript:(function(){
 if(window.passengerUi) return;
 window.passengerUi=true;
 let container=document.createElement("div");
@@ -42,4 +43,4 @@ document.getElementById("stopPassenger").onclick=function(){
     if(camId) cancelAnimationFrame(camId);
     camId=null;
 };
-                                   
+})();
